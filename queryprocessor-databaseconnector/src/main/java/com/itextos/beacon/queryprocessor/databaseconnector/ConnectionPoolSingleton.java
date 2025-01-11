@@ -13,6 +13,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.itextos.beacon.commonlib.pwdencryption.Encryptor;
 import com.itextos.beacon.queryprocessor.commonutils.CommonVariables;
 import com.itextos.beacon.queryprocessor.commonutils.Utility;
 
@@ -337,7 +338,7 @@ public class ConnectionPoolSingleton
             dbInfoModel.url                            = rsDatabaseInfo.getString(2);
             dbInfoModel.description                    = rsDatabaseInfo.getString(3);
             dbInfoModel.username                       = rsDatabaseInfo.getString(4);
-            dbInfoModel.password                       = rsDatabaseInfo.getString(5);
+            dbInfoModel.password                       = Encryptor.getDecryptedDbPassword(rsDatabaseInfo.getString(5));
             dbInfoModel.driver_class_name              = rsDatabaseInfo.getString(6);
             dbInfoModel.validation_query               = rsDatabaseInfo.getString(7);
             dbInfoModel.num_tests_per_eviction_run     = rsDatabaseInfo.getInt(8);

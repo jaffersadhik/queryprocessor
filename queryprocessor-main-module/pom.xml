@@ -1,0 +1,71 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>queryprocessor</groupId>
+    <artifactId>queryprocessor</artifactId>
+    <version>1.0</version>
+  </parent>
+  <artifactId>queryprocessor-main-module</artifactId>
+  <dependencies>
+  
+  	<dependency>
+			<groupId>queryprocessor</groupId>
+			<artifactId>queryprocessor-requestreceiver</artifactId>
+			<version>1.0</version>
+	</dependency>
+	
+		<dependency>
+			<groupId>queryprocessor</groupId>
+			<artifactId>queryprocessor-threadpoolexecutor</artifactId>
+			<version>1.0</version>
+	</dependency>
+	
+  </dependencies>
+  
+    <properties>
+		<main.class>com.itextos.beacon.queryprocessor.main.App</main.class>
+	</properties>
+
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>${spring-boot-maven-plugin-version}</version>
+				<configuration>
+					<classifier>executable</classifier>
+					<mainClass>${main.class}</mainClass>
+					    <excludes>
+                    <!-- Exclude specific JAR files -->
+                    <exclude>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-classic</artifactId>
+                    </exclude>
+                    <exclude>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-core</artifactId>
+                    </exclude>
+                    <exclude>
+                        <groupId>org.apache.logging.log4j</groupId>
+                        <artifactId>log4j-to-slf4j</artifactId>
+                    </exclude>
+                    <exclude>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>jul-to-slf4j</artifactId>
+                    </exclude>
+                </excludes>
+				</configuration>
+				<executions>
+					<execution>
+						<id>repackage</id>
+						<phase>package</phase>
+						<goals>
+							<goal>repackage</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>

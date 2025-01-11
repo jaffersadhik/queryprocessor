@@ -1,0 +1,117 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>queryprocessor</groupId>
+  <artifactId>queryprocessor</artifactId>
+  <version>1.0</version>
+  <packaging>pom</packaging>
+<properties>
+		<!-- Version of third libraries -->
+		<version.jakarta-servlet>5.0.0</version.jakarta-servlet>
+		<version.jetty>11.0.1</version.jetty>
+		<!-- Compiler Related -->
+		<maven-compiler-plugin-version>3.8.1</maven-compiler-plugin-version>
+		<spring-boot-maven-plugin-version>2.5.2</spring-boot-maven-plugin-version>
+		<maven-source-plugin-version>3.2.1</maven-source-plugin-version>
+		<jdk-build-version>11</jdk-build-version>
+
+		<!-- iTexTos related jar files -->
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<itextos-utility-version>1.1.0</itextos-utility-version>
+	</properties>
+
+  <dependencies>
+		<!-- Jetty -->
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-server</artifactId>
+			<version>${version.jetty}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-servlet</artifactId>
+			<version>${version.jetty}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-http</artifactId>
+			<version>${version.jetty}</version>
+		</dependency>
+		<!-- db connectivity -->
+		<dependency>
+			<groupId>org.mariadb.jdbc</groupId>
+			<artifactId>mariadb-java-client</artifactId>
+			<version>2.1.2</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.2.23</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-logging</groupId>
+			<artifactId>commons-logging</artifactId>
+			<version>1.2</version>
+		</dependency>
+<!-- 		<dependency> -->
+<!-- 			<groupId>org.apache.logging.log4j</groupId> -->
+<!-- 			<artifactId>log4j-jcl</artifactId> -->
+<!-- 			<version>2.14.1</version> -->
+<!-- 		</dependency> -->
+<!-- 		<dependency> -->
+<!-- 			<groupId>org.apache.logging.log4j</groupId> -->
+<!-- 			<artifactId>log4j-api</artifactId> -->
+<!-- 			<version>2.14.1</version> -->
+<!-- 		</dependency> -->
+<!-- 		<dependency> -->
+<!-- 			<groupId>org.apache.logging.log4j</groupId> -->
+<!-- 			<artifactId>log4j-core</artifactId> -->
+<!-- 			<version>2.14.1</version> -->
+<!-- 		</dependency> -->
+		<!-- Servlet API -->
+		<dependency>
+			<groupId>jakarta.servlet</groupId>
+			<artifactId>jakarta.servlet-api</artifactId>
+			<version>${version.jakarta-servlet}</version>
+		</dependency>
+		<!-- apache dbcp connector -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-dbcp2</artifactId>
+			<version>2.7.0</version>
+		</dependency>
+		<!-- swagger -->
+		<dependency>
+			<groupId>io.swagger.parser.v3</groupId>
+			<artifactId>swagger-parser</artifactId>
+			<version>2.0.26</version>
+		</dependency>
+		<dependency>
+			<groupId>com.googlecode.json-simple</groupId>
+			<artifactId>json-simple</artifactId>
+			<version>1.1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.opencsv</groupId>
+			<artifactId>opencsv</artifactId>
+			<version>5.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.xerial</groupId>
+			<artifactId>sqlite-jdbc</artifactId>
+			<version>3.34.0</version>
+		</dependency>
+	</dependencies>
+
+  <modules>
+  	<module>queryprocessor-utils</module>
+  	<module>queryprocessor-databaseconnector</module>
+  	<module>queryprocessor-paramvalidator</module>
+  	<module>queryprocessor-threadpoolexecutor</module>
+  	<module>queryprocessor-requestreceiver</module>
+  	<module>queryprocessor-beacon-utils</module>
+  	<module>queryprocessor-main-module</module>
+  	<module>queryprocessor-properties</module>
+  	<module>queryprocessor-docker</module>
+  </modules>
+</project>

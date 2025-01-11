@@ -338,8 +338,15 @@ public class ConnectionPoolSingleton
             dbInfoModel.url                            = rsDatabaseInfo.getString(2);
             dbInfoModel.description                    = rsDatabaseInfo.getString(3);
             dbInfoModel.username                       = rsDatabaseInfo.getString(4);
+            try {
             dbInfoModel.password                       = Encryptor.getDecryptedDbPassword(rsDatabaseInfo.getString(5));
+            
+            }catch(Exception e) {
+                dbInfoModel.password                       = rsDatabaseInfo.getString(5);
+
+            }
             dbInfoModel.driver_class_name              = rsDatabaseInfo.getString(6);
+        
             dbInfoModel.validation_query               = rsDatabaseInfo.getString(7);
             dbInfoModel.num_tests_per_eviction_run     = rsDatabaseInfo.getInt(8);
             dbInfoModel.min_evictable_idle_time_millis = rsDatabaseInfo.getInt(9);

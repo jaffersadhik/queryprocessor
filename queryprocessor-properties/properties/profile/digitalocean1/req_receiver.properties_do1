@@ -25,5 +25,7 @@ db_month_suffix=true
 recordLimit=1000
 maxPastDays=60
 
+db_month_suffix=true
+maxExecutorThreads=5
 sqlLiteFilePath=/sqlite
 csvFilePath=/csv

@@ -355,6 +355,8 @@ public class ConnectionPoolSingleton
             // for now result set is used
             databaseID.put(dbID, dbInfoModel);
         }
+        
+        log.debug("databaseID : "+databaseID);
         rsDatabaseInfo.close();
         stmt.close();
     }

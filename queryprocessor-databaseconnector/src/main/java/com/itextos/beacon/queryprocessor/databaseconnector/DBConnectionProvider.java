@@ -58,6 +58,7 @@ public class DBConnectionProvider
         if (DB_CFG == null)
             throw new Exception("JNDI Info not found for the DB ID: " + dbID);
 
+        try {
         final String     JDBC_Url                  = DB_CFG.url;
 
         final String     DB_User                   = DB_CFG.username.trim();
@@ -91,6 +92,11 @@ public class DBConnectionProvider
         DB_CP_Props.put("testOnBorrow", Boolean.TRUE);
 
         hmConnPool.put(dbID, BasicDataSourceFactory.createDataSource(DB_CP_Props));
+        }catch(Exception e) {
+        	
+        	log.error("dbID : "+dbID+ " DB_CFG : "+DB_CFG,e);
+        	throw e;
+        }
     }
 
     public static Connection getDriectConnection(

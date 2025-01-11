@@ -1,4 +1,4 @@
-package com.itextos.beacon.queryprocessor.requestreceiver;
+	package com.itextos.beacon.queryprocessor.requestreceiver;
 
 import java.io.IOException;
 import java.sql.Connection;

@@ -341,6 +341,10 @@ public class ConnectionPoolSingleton
             try {
             dbInfoModel.password                       = Encryptor.getDecryptedDbPassword(rsDatabaseInfo.getString(5));
             
+            if( dbInfoModel.password  ==null) {
+                dbInfoModel.password                       = rsDatabaseInfo.getString(5);
+
+            }
             }catch(Exception e) {
                 dbInfoModel.password                       = rsDatabaseInfo.getString(5);
 

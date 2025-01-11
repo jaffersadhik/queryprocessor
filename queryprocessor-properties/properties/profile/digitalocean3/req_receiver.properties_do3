@@ -24,3 +24,6 @@ mysql.cp.min_evict_idle_tm=1800000
 db_month_suffix=true
 recordLimit=1000
 maxPastDays=60
+
+sqlLiteFilePath=/sqlite
+csvFilePath=/csv

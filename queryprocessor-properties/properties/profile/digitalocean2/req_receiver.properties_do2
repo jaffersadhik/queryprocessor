@@ -1,6 +1,7 @@
 server.port = 8081
 server.min.threads=2
 server.max.threads=8
+maxExecutorThreads=3
 
 mysql.host=10.139.244.160
 mysql.port=30001
@@ -23,3 +24,6 @@ mysql.cp.min_evict_idle_tm=1800000
 db_month_suffix=true
 recordLimit=1000
 maxPastDays=60
+
+sqlLiteFilePath=/sqlite
+csvFilePath=/csv

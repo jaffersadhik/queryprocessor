@@ -29,5 +29,5 @@ COPY ./target/properties/profile/digitalocean3/req_receiver.properties_do3 /req_
 
 COPY ./target/queryprocessor-main-module-1.0-executable.jar /queryprocessor-main-module-1.0-executable.jar
 
-ENTRYPOINT ["java","-Dlog4j.configurationFile=file:/log4j2-common.xml","-jar","/queryprocessor-main-module-1.0-executable"]
+ENTRYPOINT ["java","-Dlog4j.configurationFile=file:/log4j2-common.xml","-jar","/queryprocessor-main-module-1.0-executable.jar"]
 

@@ -230,7 +230,7 @@ public class ConnectionPoolSingleton
         String          ssql = null;
 
         if (ConnPoolObj.CfgMDBBillingJNDI != null)
-            ssql = "select id from jndi_info where description='" + ConnPoolObj.CfgMDBBillingJNDI + "'";
+            ssql = "select id from sysconfig.jndi_info where description='" + ConnPoolObj.CfgMDBBillingJNDI + "'";
         else
             ssql = "select jndi_info_id from bill_log_map_default";
 

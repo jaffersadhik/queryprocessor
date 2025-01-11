@@ -1,6 +1,7 @@
 server.port = 8081
 server.min.threads=2
 server.max.threads=8
+maxExecutorThreads=3
 
 mysql.host=10.139.244.160
 mysql.port=30001

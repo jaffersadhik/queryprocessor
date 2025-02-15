@@ -15,6 +15,8 @@ public class App {
 		if(module.equals("qpr")) {
 			
 			com.itextos.beacon.queryprocessor.requestreceiver.QueryEngine.main(args);
+			com.itextos.beacon.queryprocessor.threadpoolexecutor.ProcessQueueThreadPool.main(args);
+
 			
 		}else if(module.equals("qptp")) {
 			

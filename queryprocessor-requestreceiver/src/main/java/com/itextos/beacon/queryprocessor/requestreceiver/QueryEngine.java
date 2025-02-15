@@ -57,6 +57,9 @@ public class QueryEngine
             handler.addServlet(LogDataQueueStatus.class, "/log_queue/status");
 
             handler.addServlet(LogDataQueueList.class, "/log_queue/list");
+            
+            handler.addServlet(Metrics.class, "/metrics");
+
 
             server.start();
 

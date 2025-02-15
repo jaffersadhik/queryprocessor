@@ -40,116 +40,129 @@ import com.itextos.beacon.queryprocessor.databaseconnector.SqlLiteConnectionProv
 public class ProcessQueueThreadPool
 {
 
-    private static final Log log           = LogFactory.getLog(ProcessQueueThreadPool.class);
-    static int               MAX_T         = 1;
-    static final Properties  mySQL_cfg_val = new Properties();
+    public static final Log log           = LogFactory.getLog(ProcessQueueThreadPool.class);
+    public static int               MAX_T         = 1;
+    public static final Properties  mySQL_cfg_val = new Properties();
 
     public static void main(
             String[] args)
     {
-        Connection masterDBConn = null;
-        String     queue_id     = null;
+    	
+    	new ProcessQueueThreadPool.T().start();
+    }
 
-        try
-        {
-            final String cfg_fn ="/req_receiver.properties_"+System.getenv("profile");// args[0];
-            log.info("Reading values from config file: " + cfg_fn);
-            final FileReader file = new FileReader(cfg_fn);
-            mySQL_cfg_val.load(file);
-            file.close();
-            final ConnectionPoolSingleton connPool = ConnectionPoolSingleton.createInstance(mySQL_cfg_val);
-            masterDBConn = DBConnectionProvider.getMasterDBConnection();
+    static class T extends Thread{
+    	
+    	
+    	public void run() {
+    		
 
-            MAX_T        = Utility.getInteger(mySQL_cfg_val.getProperty("maxExecutorThreads").trim());
-            log.info("Queue Processor Executor Max Threads: " + MAX_T);
-            // creates a thread pool with MAX_T no. of
-            // threads as the fixed pool size(Step 2)
-            final ExecutorService pool = Executors.newFixedThreadPool(MAX_T);
-            log.info("Queue Processor Executor started");
+            Connection masterDBConn = null;
+            String     queue_id     = null;
 
-            while (true)
+            try
             {
-                if (log.isDebugEnabled())
-                    log.debug("Checking pending items on queue");
-                queue_id = null;
-                final ResultSet rs_pending_queue = SQLStatementExecutor.getPendingQueue(masterDBConn);
+                final String cfg_fn ="/req_receiver.properties_"+System.getenv("profile");// args[0];
+                log.info("Reading values from config file: " + cfg_fn);
+                final FileReader file = new FileReader(cfg_fn);
+                mySQL_cfg_val.load(file);
+                file.close();
+                final ConnectionPoolSingleton connPool = ConnectionPoolSingleton.createInstance(mySQL_cfg_val);
+                masterDBConn = DBConnectionProvider.getMasterDBConnection();
 
-                if (rs_pending_queue != null)
+                MAX_T        = Utility.getInteger(mySQL_cfg_val.getProperty("maxExecutorThreads").trim());
+                log.info("Queue Processor Executor Max Threads: " + MAX_T);
+                // creates a thread pool with MAX_T no. of
+                // threads as the fixed pool size(Step 2)
+                final ExecutorService pool = Executors.newFixedThreadPool(MAX_T);
+                log.info("Queue Processor Executor started");
+
+                while (true)
                 {
+                    if (log.isDebugEnabled())
+                        log.debug("Checking pending items on queue");
+                    queue_id = null;
+                    final ResultSet rs_pending_queue = SQLStatementExecutor.getPendingQueue(masterDBConn);
 
-                    if (rs_pending_queue.next())
+                    if (rs_pending_queue != null)
                     {
-                        queue_id = rs_pending_queue.getString("queue_id");
 
-                        log.info(String.format("Processing queue - QUEUE ID : %s", queue_id));
+                        if (rs_pending_queue.next())
+                        {
+                            queue_id = rs_pending_queue.getString("queue_id");
 
-                        SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
-                                String.format("Queue Processing Started"), CommonVariables.INFO);
+                            log.info(String.format("Processing queue - QUEUE ID : %s", queue_id));
 
-                        // update the status of the picked record
-                        final String            updSQL = "update query_async_queue "
-                                + " set current_status=?, started_ts=?, modified_ts=? " + " where queue_id = ?";
-                        final PreparedStatement pstmt  = masterDBConn.prepareStatement(updSQL);
-                        pstmt.setString(1, CommonVariables.QUEUE_STARTED);
-                        pstmt.setString(2, DateTimeUtility.getFormattedCurrentDateTime(DateTimeFormat.DEFAULT));
-                        pstmt.setString(3, DateTimeUtility.getFormattedCurrentDateTime(DateTimeFormat.DEFAULT));
-                        pstmt.setString(4, queue_id);
-                        pstmt.executeUpdate();
-                        pstmt.close();
-                        masterDBConn.commit();
+                            SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
+                                    String.format("Queue Processing Started"), CommonVariables.INFO);
 
-                        SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
-                                String.format("Starting background task"), CommonVariables.INFO);
-                        log.info("Starting background task");
-                        // passes the Task objects to the pool to execute (Step 3)
-                        final Runnable queue_task = new GenerateRequestedData(connPool, queue_id);
+                            // update the status of the picked record
+                            final String            updSQL = "update query_async_queue "
+                                    + " set current_status=?, started_ts=?, modified_ts=? " + " where queue_id = ?";
+                            final PreparedStatement pstmt  = masterDBConn.prepareStatement(updSQL);
+                            pstmt.setString(1, CommonVariables.QUEUE_STARTED);
+                            pstmt.setString(2, DateTimeUtility.getFormattedCurrentDateTime(DateTimeFormat.DEFAULT));
+                            pstmt.setString(3, DateTimeUtility.getFormattedCurrentDateTime(DateTimeFormat.DEFAULT));
+                            pstmt.setString(4, queue_id);
+                            pstmt.executeUpdate();
+                            pstmt.close();
+                            masterDBConn.commit();
 
-                        pool.execute(queue_task);
+                            SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
+                                    String.format("Starting background task"), CommonVariables.INFO);
+                            log.info("Starting background task");
+                            // passes the Task objects to the pool to execute (Step 3)
+                            final Runnable queue_task = new GenerateRequestedData(connPool, queue_id);
+
+                            pool.execute(queue_task);
+                        }
+
+                        final Statement stmt = rs_pending_queue.getStatement();
+                        rs_pending_queue.close();
+                        stmt.close();
+                        Thread.sleep(10000);
                     }
-
-                    final Statement stmt = rs_pending_queue.getStatement();
-                    rs_pending_queue.close();
-                    stmt.close();
-                    Thread.sleep(10000);
+                    else
+                        // nothing pending to process, make the thread sleep for 10 secs
+                        Thread.sleep(10000);
                 }
-                else
-                    // nothing pending to process, make the thread sleep for 10 secs
-                    Thread.sleep(10000);
             }
-        }
-        catch (final Exception e)
-        {
-            log.error(e.getMessage(), e);
-            e.printStackTrace();
-            if (queue_id != null)
-                try
-                {
-                    SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id, e.getMessage(),
-                            CommonVariables.ERROR);
-                }
-                catch (final Exception e1)
-                {
-                    log.error("Error while updating Queue Status", e1);
-                    e1.printStackTrace();
-                }
-        }
-        finally
-        {
-            if (masterDBConn != null)
-                try
-                {
-                    if (!masterDBConn.isClosed())
-                        masterDBConn.close();
-                }
-                catch (final Exception ex)
-                {
-                    log.error("Error while closing Master DB Connection", ex);
-                    ex.printStackTrace();
-                }
-        }
+            catch (final Exception e)
+            {
+                log.error(e.getMessage(), e);
+                e.printStackTrace();
+                if (queue_id != null)
+                    try
+                    {
+                        SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id, e.getMessage(),
+                                CommonVariables.ERROR);
+                    }
+                    catch (final Exception e1)
+                    {
+                        log.error("Error while updating Queue Status", e1);
+                        e1.printStackTrace();
+                    }
+            }
+            finally
+            {
+                if (masterDBConn != null)
+                    try
+                    {
+                        if (!masterDBConn.isClosed())
+                            masterDBConn.close();
+                    }
+                    catch (final Exception ex)
+                    {
+                        log.error("Error while closing Master DB Connection", ex);
+                        ex.printStackTrace();
+                    }
+            }
+        
+    	}
     }
 
 }
+
 
 class GenerateRequestedData
         implements

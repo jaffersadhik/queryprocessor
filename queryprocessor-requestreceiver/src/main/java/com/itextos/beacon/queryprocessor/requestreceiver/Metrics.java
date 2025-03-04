@@ -45,4 +45,16 @@ public class Metrics
        
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    protected void doGet(
+            HttpServletRequest req,
+            HttpServletResponse resp)
+            throws ServletException,
+            IOException
+    {
+        // add timestamp of the server
+    	doPost(req, resp);
+       
+    }
 }

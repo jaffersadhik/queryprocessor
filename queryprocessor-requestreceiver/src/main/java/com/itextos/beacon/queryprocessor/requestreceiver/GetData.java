@@ -85,9 +85,7 @@ public class GetData
     {
         final JSONObject resJson            = new JSONObject();
 
-        Connection       clientConnection   = null;
-        Connection       clientPGConnection = null;
-
+  
         try
         {
             if (connPool == null)
@@ -247,13 +245,13 @@ public class GetData
             log.info(String.format("Total requested days : %d", (totalDays + 1)));
 
             int             recordCount = 0;
-            final JSONArray dataList    = new JSONArray();
+             JSONArray dataList    = new JSONArray();
 
             for (final LocalDateTime date : listOfDates)
             {
                 LocalDateTime qStartDate = null;
                 LocalDateTime qEndDate   = null;
-                ResultSet     rsRecords  = null;
+            //    ResultSet     rsRecords  = null;
 
                 final String  dateStr    = Utility.formatDateTime(date.toLocalDate());
 
@@ -276,69 +274,39 @@ public class GetData
                 {
                     log.info("Fetching Data from MariaDB");
 
-                    if (clientConnection == null)
-                        clientConnection = DBConnectionProvider.getDBConnection(connPool.defaultMDBCliJNDI_ID);
-
-                    rsRecords = SQLStatementExecutor.getMariaDBDataForAPI(clientConnection, lstCli, qStartDate,
-                            qEndDate, paramJson, maxlimit);
+              
+                    dataList = SQLStatementExecutor.getMariaDBDataForAPI(connPool.defaultMDBCliJNDI_ID, lstCli, qStartDate,
+                            qEndDate, paramJson, maxlimit,lstJSONCols,timeZoneName);
                 }
                 else
                 {
                     log.info("Fetching Data from Postgresql");
-                    if (clientPGConnection == null)
-                        clientPGConnection = DBConnectionProvider.getDBConnection(connPool.defaultPGCliJNDI_ID);
-
-                    rsRecords = SQLStatementExecutor.getPGDataForAPI(clientPGConnection, lstCli, qStartDate, qEndDate,
-                            paramJson, maxlimit);
+             
+                    dataList = SQLStatementExecutor.getPGDataForAPI(connPool.defaultPGCliJNDI_ID, lstCli, qStartDate, qEndDate,
+                            paramJson, maxlimit,lstJSONCols,timeZoneName);
                 }
 
-                if (rsRecords != null)
-                {
-                    int                   dataCount = 0;
-                    final HashSet<String> hsMsgId   = new HashSet<>();
-                    final JSONArray       ja        = ResultSetConverter.ConvertRsToJSONArray(rsRecords, lstJSONCols,
-                            timeZoneName);
+                
 
-                    if ((ja != null) && (ja.size() > 0))
-                    {
+               
+               
+        
+               
+               if(dataList!=null) {
+            	   
+            	   if(dataList.size()<1) {
+            		   
+                           log.info(String.format("No Data available for the Date: %s", dateStr));
 
-                        for (final Object oe : ja)
-                        {
-                            final JSONObject jo = (JSONObject) oe;
-
-                            if (jo.containsKey(CommonVariables.MSG_ID_COL_NAME))
-                            {
-                                final String msgId = (String) jo.get(CommonVariables.MSG_ID_COL_NAME);
-
-                                if ((msgId != null))
-                                {
-                                    if (hsMsgId.contains(msgId))
-                                        continue;
-                                    hsMsgId.add(msgId);
-                                }
-                                jo.remove(CommonVariables.MSG_ID_COL_NAME);
-                            }
-                            dataList.add(jo);
-                            recordCount++;
-                            dataCount++;
-                            if (maxlimit == recordCount)
-                                break;
-                        }
-                        log.info(String.format("Date: %s, Count: %d", dateStr, dataCount));
-                    }
-
-                    if (dataCount == 0)
-                        log.info(String.format("No Data available for the Date: %s", dateStr));
-
-                    final Statement stmt = rsRecords.getStatement();
-                    rsRecords.close();
-                    stmt.close();
-
-                    if (maxlimit == recordCount)
-                        break;
-                }
-                else
-                {
+            	   }else {
+            		  
+            		   recordCount=dataList.size();
+            		   
+            		   if (maxlimit == recordCount)
+                           break;
+                      
+            	   }
+               } else {
                     log.error(String.format("Unable to get Data for the Date: %s", dateStr));
                     resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR_500);
                     resJson.put(CommonVariables.STATUS_MESSAGE, "Unable to retrieve the data");
@@ -356,40 +324,16 @@ public class GetData
             // resp.setContentType("application/json");
             resp.setCharacterEncoding("UTF-8");
             resp.getWriter().println(resJson.toJSONString());
-        }
-        catch (final Exception e)
+        
+        
+    }catch (final Exception e)
         {
-            log.error("Error Occurred", e);
-            resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR_500);
-            resJson.put(CommonVariables.STATUS_MESSAGE, "Unable to retrieve the data");
-            resp.getWriter().println(resJson.toJSONString());
-        }
-        finally
-        {
-            if ((clientConnection != null))
-                try
-                {
-                    if (!clientConnection.isClosed())
-                        clientConnection.close();
-                }
-                catch (final Exception ex)
-                {
-                    log.error("Error while closing MariaDB Connection", ex);
-                    ex.printStackTrace();
-                }
-
-            if ((clientPGConnection != null))
-                try
-                {
-                    if (!clientPGConnection.isClosed())
-                        clientPGConnection.close();
-                }
-                catch (final Exception ex2)
-                {
-                    log.error("Error while closing Posgresql DB Connection", ex2);
-                    ex2.printStackTrace();
-                }
-        }
+        log.error("Error Occurred", e);
+        resp.setStatus(HttpStatus.INTERNAL_SERVER_ERROR_500);
+        resJson.put(CommonVariables.STATUS_MESSAGE, "Unable to retrieve the data");
+        resp.getWriter().println(resJson.toJSONString());
+    }
+    
     }
 
 }

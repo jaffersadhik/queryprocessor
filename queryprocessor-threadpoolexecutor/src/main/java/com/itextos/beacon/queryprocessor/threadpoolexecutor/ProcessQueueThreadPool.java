@@ -68,7 +68,6 @@ public class ProcessQueueThreadPool
                 mySQL_cfg_val.load(file);
                 file.close();
                 final ConnectionPoolSingleton connPool = ConnectionPoolSingleton.createInstance(mySQL_cfg_val);
-                masterDBConn = DBConnectionProvider.getMasterDBConnection();
 
                 MAX_T        = Utility.getInteger(mySQL_cfg_val.getProperty("maxExecutorThreads").trim());
                 log.info("Queue Processor Executor Max Threads: " + MAX_T);
@@ -82,49 +81,39 @@ public class ProcessQueueThreadPool
                     if (log.isDebugEnabled())
                         log.debug("Checking pending items on queue");
                     queue_id = null;
-                    final ResultSet rs_pending_queue = SQLStatementExecutor.getPendingQueue(masterDBConn);
+                    
+               //     masterDBConn = ;
 
-                    if (rs_pending_queue != null)
-                    {
+                 
 
-                        if (rs_pending_queue.next())
-                        {
-                            queue_id = rs_pending_queue.getString("queue_id");
+                       
+                            queue_id = SQLStatementExecutor.getPendingQueue();
 
+                            if (queue_id!=null)
+                            {
                             log.info(String.format("Processing queue - QUEUE ID : %s", queue_id));
 
-                            SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
+                            SQLStatementExecutor.logQueueProcessingInfo( queue_id,
                                     String.format("Queue Processing Started"), CommonVariables.INFO);
 
-                            // update the status of the picked record
-                            final String            updSQL = "update query_async_queue "
-                                    + " set current_status=?, started_ts=?, modified_ts=? " + " where queue_id = ?";
-                            final PreparedStatement pstmt  = masterDBConn.prepareStatement(updSQL);
-                            pstmt.setString(1, CommonVariables.QUEUE_STARTED);
-                            pstmt.setString(2, DateTimeUtility.getFormattedCurrentDateTime(DateTimeFormat.DEFAULT));
-                            pstmt.setString(3, DateTimeUtility.getFormattedCurrentDateTime(DateTimeFormat.DEFAULT));
-                            pstmt.setString(4, queue_id);
-                            pstmt.executeUpdate();
-                            pstmt.close();
-                            masterDBConn.commit();
+                            SQLStatementExecutor.update(CommonVariables.QUEUE_STARTED,queue_id);
+                          
 
-                            SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
+                            SQLStatementExecutor.logQueueProcessingInfo( queue_id,
                                     String.format("Starting background task"), CommonVariables.INFO);
                             log.info("Starting background task");
                             // passes the Task objects to the pool to execute (Step 3)
                             final Runnable queue_task = new GenerateRequestedData(connPool, queue_id);
 
                             pool.execute(queue_task);
+                        }else {
+                        	
+                            Thread.sleep(10000);
+
                         }
 
-                        final Statement stmt = rs_pending_queue.getStatement();
-                        rs_pending_queue.close();
-                        stmt.close();
-                        Thread.sleep(10000);
-                    }
-                    else
-                        // nothing pending to process, make the thread sleep for 10 secs
-                        Thread.sleep(10000);
+                      
+                 
                 }
             }
             catch (final Exception e)
@@ -134,7 +123,7 @@ public class ProcessQueueThreadPool
                 if (queue_id != null)
                     try
                     {
-                        SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id, e.getMessage(),
+                        SQLStatementExecutor.logQueueProcessingInfo( queue_id, e.getMessage(),
                                 CommonVariables.ERROR);
                     }
                     catch (final Exception e1)
@@ -197,19 +186,21 @@ class GenerateRequestedData
             final String serverIP = Utility.getApplicationServerIp();
             log.info(String.format("Queue Task Started - QUEUE ID: %s, Host: %s", queue_id, serverIP));
             masterDBConn = DBConnectionProvider.getMasterDBConnection();
-            SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
+            SQLStatementExecutor.logQueueProcessingInfo( queue_id,
                     "Queue Task Started in the Host:" + serverIP, CommonVariables.INFO);
 
-            // getting queue request information
-            final ResultSet rs_pending_queue = SQLStatementExecutor.getQueryRequestInfo(masterDBConn, queue_id);
+            // getting queue request information 
+     //       final ResultSet rs_pending_queue = SQLStatementExecutor.getQueryRequestInfo(masterDBConn, queue_id);
+            
+           String queryparam= SQLStatementExecutor.getQueryRequestInfo( queue_id);
 
-            if (rs_pending_queue.next())
+            if (queryparam!=null)
             {
                 log.info(String.format("Request parameter info available - QUEUE ID: %s", queue_id));
 
                 final JSONParser parser       = new JSONParser();
                 final JSONObject paramJson    = (JSONObject) parser
-                        .parse(rs_pending_queue.getString(CommonVariables.QUERY_PARAM));
+                        .parse(queryparam);
 
                 boolean          full_message = false;
                 if (paramJson.containsKey(CommonVariables.R_FULL_MESSAGE))
@@ -275,7 +266,7 @@ class GenerateRequestedData
                     catch (final Exception e)
                     {
                         log.error("Error while deleting SQLite DB File: " + sqliteDBFile, e);
-                        SQLStatementExecutor.updateQueueStatus(masterDBConn, queue_id, CommonVariables.COMPLETION_ERROR,
+                        SQLStatementExecutor.updateQueueStatus( queue_id, CommonVariables.COMPLETION_ERROR,
                                 -1, CommonVariables.COMPLETION_FAILURE);
                         return;
                     }
@@ -317,7 +308,7 @@ class GenerateRequestedData
 
                     log.info(String.format("Query Param Start Time : %s", Utility.formatDateTime(qStartDate)));
                     log.info(String.format("Query Param End Time : %s", Utility.formatDateTime(qEndDate)));
-                    SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
+                    SQLStatementExecutor.logQueueProcessingInfo( queue_id,
                             String.format("Processing Date: %s", procDateStr), CommonVariables.INFO);
 
                     if (date.toLocalDate().isAfter(LocalDate.now().plusDays(-2)))
@@ -333,7 +324,7 @@ class GenerateRequestedData
                             {
                                 log.error("Unable to get MariaDB Connection for the JNDI ID: "
                                         + connPool.defaultMDBCliJNDI_ID);
-                                SQLStatementExecutor.updateQueueStatus(masterDBConn, queue_id,
+                                SQLStatementExecutor.updateQueueStatus( queue_id,
                                         CommonVariables.COMPLETION_ERROR, -1, CommonVariables.COMPLETION_FAILURE);
                                 return;
                             }
@@ -363,7 +354,7 @@ class GenerateRequestedData
                             {
                                 log.error("Unable to get PGDB Connection for the JNDI ID: "
                                         + connPool.defaultPGCliJNDI_ID);
-                                SQLStatementExecutor.updateQueueStatus(masterDBConn, queue_id,
+                                SQLStatementExecutor.updateQueueStatus( queue_id,
                                         CommonVariables.COMPLETION_ERROR, -1, CommonVariables.COMPLETION_FAILURE);
                                 return;
                             }
@@ -385,7 +376,7 @@ class GenerateRequestedData
                     if (rsRecords == null)
                     {
                         log.error(String.format("Unable to get Data for the Date: %s", procDateStr));
-                        SQLStatementExecutor.updateQueueStatus(masterDBConn, queue_id, CommonVariables.COMPLETION_ERROR,
+                        SQLStatementExecutor.updateQueueStatus( queue_id, CommonVariables.COMPLETION_ERROR,
                                 -1, CommonVariables.COMPLETION_FAILURE);
                         return;
                     }
@@ -416,14 +407,14 @@ class GenerateRequestedData
 
                     if (sort_available)
                     {
-                        SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
+                        SQLStatementExecutor.logQueueProcessingInfo( queue_id,
                                 "Writing Data into SQLite for sorting", "INFO");
                         dataCount = sqliteCP.insertCSVRecords(rsRecords, timeZoneName);
                         log.info("Written Data into SQLite for sorting, Count: " + dataCount);
                     }
                     else
                     {
-                        SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
+                        SQLStatementExecutor.logQueueProcessingInfo( queue_id,
                                 "Writing Data into CSV File", CommonVariables.INFO);
                         dataCount = ResultSetConverter.writeRStoLogCSVFile(rsRecords, bwCSV, timeZoneName);
                         log.info("Written Data into CSV File, Count: " + dataCount);
@@ -447,7 +438,7 @@ class GenerateRequestedData
 
                     if (sort_available && (recordCount > 0))
                     {
-                        SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
+                        SQLStatementExecutor.logQueueProcessingInfo( queue_id,
                                 "Writing sorted data from SQLite into CSV File", CommonVariables.INFO);
                         final int sort_count = sqliteCP.writeSortLogCSVFile(bwCSV);
                         log.info("Written sorted data from SQLite into CSV File, Count: " + sort_count);
@@ -460,20 +451,18 @@ class GenerateRequestedData
                 bwCSV.close();
 
                 log.info(String.format("CSV Created successfully, Record Count: %d", recordCount));
-                SQLStatementExecutor.logQueueProcessingInfo(masterDBConn, queue_id,
+                SQLStatementExecutor.logQueueProcessingInfo( queue_id,
                         String.format("CSV Created successfully, Record Count: %d", recordCount), CommonVariables.INFO);
-                SQLStatementExecutor.updateQueueStatus(masterDBConn, queue_id, CommonVariables.QUEUE_COMPLETED,
+                SQLStatementExecutor.updateQueueStatus( queue_id, CommonVariables.QUEUE_COMPLETED,
                         recordCount, CommonVariables.COMPLETION_SUCCESS);
             }
             else
             {
-                SQLStatementExecutor.updateQueueStatus(masterDBConn, queue_id, CommonVariables.COMPLETION_ERROR, -1,
+                SQLStatementExecutor.updateQueueStatus( queue_id, CommonVariables.COMPLETION_ERROR, -1,
                         CommonVariables.COMPLETION_FAILURE);
                 log.error(String.format("No request parameter info available - QUEUE ID: %s", queue_id));
             }
-            final Statement stmt = rs_pending_queue.getStatement();
-            rs_pending_queue.close();
-            stmt.close();
+         
         }
         catch (final Exception e)
         {
@@ -482,7 +471,7 @@ class GenerateRequestedData
 
             try
             {
-                SQLStatementExecutor.updateQueueStatus(masterDBConn, queue_id, CommonVariables.COMPLETION_ERROR, -1,
+                SQLStatementExecutor.updateQueueStatus( queue_id, CommonVariables.COMPLETION_ERROR, -1,
                         CommonVariables.COMPLETION_FAILURE);
             }
             catch (final Exception e1)

@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,6 +15,8 @@ import org.apache.commons.logging.LogFactory;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import com.itextos.beacon.commonlib.constants.DateTimeFormat;
+import com.itextos.beacon.commonlib.utility.DateTimeUtility;
 import com.itextos.beacon.queryprocessor.commonutils.CommonVariables;
 import com.itextos.beacon.queryprocessor.commonutils.Utility;
 
@@ -23,48 +26,167 @@ public class SQLStatementExecutor
     private static final Log              log         = LogFactory.getLog(SQLStatementExecutor.class);
     public static ConnectionPoolSingleton ConnPoolObj = null;
 
-    public static ResultSet getQueryRecordsForUpdate(
-            Connection conn,
-            String ssql)
+    public static String getQueryRecordsForUpdate()
     {
-        Statement stmt;
-
+    	
+    	final String ssql = "SELECT queue_id FROM query_async_queue WHERE current_status = 'QUEUED' "
+                + "ORDER BY requested_ts  LIMIT 1 OFFSET 0 FOR UPDATE ";
+        Statement stmt=null;
+        ResultSet rsResults=null;
+        Connection conn=null;
         try
         {
+        	
+        	conn= DBConnectionProvider.getMasterDBConnection();
             stmt = conn.createStatement();
 
             // read client table to get connection strings
-            final ResultSet rsResults = stmt.executeQuery(ssql);
+            rsResults  = stmt.executeQuery(ssql);
+            
+            if(rsResults.next()) {
+                return rsResults.getString("queue_id");
 
-            return rsResults;
+            }
+
         }
-        catch (final SQLException e)
+        catch (final Exception e)
         {
             log.error(e.getMessage(), e);
+            
+        }finally {
+        	
+        	
+	if(rsResults!=null) {
+        		
+        		try {
+        			rsResults.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+        		
+        	}
+        	
+	if(stmt!=null) {
+        		
+        		try {
+        			stmt.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+        		
+        	}
+        	
+        	if(conn!=null) {
+        		
+        		try {
+					conn.close();
+				} catch (SQLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+        		
+        	}
         }
 
         return null;
     }
 
-    public static ResultSet getQueryRecords(
-            Connection conn,
-            String ssql)
+    
+    public static ResultSet getQueryRecords(Connection clientConnection,String ssql )
     {
-        Statement stmt;
+    	
+
+        Statement stmt=null;
 
         try
         {
-            stmt = conn.createStatement();
+
+            stmt = clientConnection.createStatement();
 
             // read client table to get connection strings
-            final ResultSet rsResults = stmt.executeQuery(ssql);
+            return stmt.executeQuery(ssql);
 
-            return rsResults;
+           
         }
-        catch (final SQLException e)
+        catch (final Exception e)
         {
             log.error(e.getMessage(), e);
+        }finally {
+        	
+
         }
+		
+	
+
+        return null;
+    }
+    
+    
+    public static String getQueryRecords(String queue_id )
+    {
+    	
+        final String ssql = String.format("SELECT * FROM query_async_queue_req_info WHERE queue_id = '%s' ", queue_id);
+        Connection clientConnection=null;
+     
+        Statement stmt=null;
+
+        ResultSet rsResults=null;
+        try
+        {
+        	clientConnection= DBConnectionProvider.getMasterDBConnection();
+
+            stmt = clientConnection.createStatement();
+
+            // read client table to get connection strings
+            rsResults  = stmt.executeQuery(ssql);
+
+            if(rsResults.next()) {
+            	
+            	return rsResults.getString(CommonVariables.QUERY_PARAM);
+            }
+        }
+        catch (final Exception e)
+        {
+            log.error(e.getMessage(), e);
+        }finally {
+        	
+try {
+        		
+        		if(rsResults!=null) {
+        			
+        			rsResults.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
+        	
+        	
+	try {
+        		
+        		if(stmt!=null) {
+        			
+        			stmt.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
+        	
+	
+	
+        	try {
+        		
+        		if(clientConnection!=null) {
+        			
+        			clientConnection.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
+        }
+		
+	
 
         return null;
     }
@@ -122,13 +244,15 @@ public class SQLStatementExecutor
         return sbColumns.toString();
     }
 
-    public static ResultSet getMariaDBDataForAPI(
-            Connection clientConnection,
+    public static JSONArray getMariaDBDataForAPI(
+    		String                                           defaultMDBCliJNDI_ID,
             List<String> client_ids,
             LocalDateTime ldt_startDate,
             LocalDateTime ldt_endDate,
             JSONObject paramJson,
-            int maxlimit)
+            int maxlimit,
+            List<String> lstJSONCols,
+            String        timeZoneName)
             throws Exception
     {
         final String condition    = generateFilterCondition((JSONObject) paramJson.get("filters"),
@@ -158,17 +282,129 @@ public class SQLStatementExecutor
                 startDate, endDate, cli_id_list, condition, maxlimit);
 
         log.info(ssql);
+        
 
-        return getQueryRecords(clientConnection, ssql);
+       return getData(defaultMDBCliJNDI_ID, lstJSONCols, timeZoneName, ssql);
+
+        
+        
+        
+        
     }
 
-    public static ResultSet getPGDataForAPI(
-            Connection clientConnection,
+    private static JSONArray getData(String                                           defaultMDBCliJNDI_ID,
+    		List<String> lstJSONCols,
+            String        timeZoneName,String ssql) {
+
+        
+        Connection clientConnection=null;
+        
+        Statement stmt=null;
+
+        ResultSet rsRecords=null;
+        try
+        {
+        	clientConnection= DBConnectionProvider.getDBConnection(defaultMDBCliJNDI_ID);
+
+            stmt = clientConnection.createStatement();
+
+            // read client table to get connection strings
+            rsRecords  = stmt.executeQuery(ssql);
+             JSONArray dataList    = new JSONArray();
+
+            	
+            	if (rsRecords != null)
+                {
+                    int                   dataCount = 0;
+                    final HashSet<String> hsMsgId   = new HashSet<>();
+                    final JSONArray       ja        = ResultSetConverter.ConvertRsToJSONArray(rsRecords, lstJSONCols,
+                            timeZoneName);
+
+                    if ((ja != null) && (ja.size() > 0))
+                    {
+
+                        for (final Object oe : ja)
+                        {
+                            final JSONObject jo = (JSONObject) oe;
+
+                            if (jo.containsKey(CommonVariables.MSG_ID_COL_NAME))
+                            {
+                                final String msgId = (String) jo.get(CommonVariables.MSG_ID_COL_NAME);
+
+                                if ((msgId != null))
+                                {
+                                    if (hsMsgId.contains(msgId))
+                                        continue;
+                                    hsMsgId.add(msgId);
+                                }
+                                jo.remove(CommonVariables.MSG_ID_COL_NAME);
+                            }
+                            dataList.add(jo);
+                            dataCount++;
+                         
+                        }
+                    }
+
+                 
+
+                    
+                    return  dataList;
+                }
+            
+        }
+        catch (final Exception e)
+        {
+            log.error(e.getMessage(), e);
+        }finally {
+        	
+try {
+        		
+        		if(rsRecords!=null) {
+        			
+        			rsRecords.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
+        	
+        	
+	try {
+        		
+        		if(stmt!=null) {
+        			
+        			stmt.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
+        	
+	
+	
+        	try {
+        		
+        		if(clientConnection!=null) {
+        			
+        			clientConnection.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
+        }
+		
+	
+
+        return null;
+		
+	}
+
+	public static JSONArray getPGDataForAPI(
+    		String                                           defaultPGCliJNDI_ID,
             List<String> client_ids,
             LocalDateTime ldt_startDate,
             LocalDateTime ldt_endDate,
             JSONObject paramJson,
-            int maxlimit)
+            int maxlimit ,      List<String> lstJSONCols,
+            String        timeZoneName)
             throws Exception
     {
         final String condition   = generateFilterCondition((JSONObject) paramJson.get("filters"),
@@ -187,7 +423,7 @@ public class SQLStatementExecutor
 
         log.info(ssql);
 
-        return getQueryRecords(clientConnection, ssql);
+        return getData(defaultPGCliJNDI_ID, lstJSONCols, timeZoneName, ssql);
     }
 
     public static ResultSet getLogRecords(
@@ -600,15 +836,14 @@ public class SQLStatementExecutor
         return str.toString();
     }
 
-    public static ResultSet getQueryRequestInfo(
-            Connection clientConnection,
+    public static String getQueryRequestInfo(
+           
             String queue_id)
     {
         log.info(String.format("Fetching request parameter info - QUEUE ID : %s", queue_id));
 
-        final String ssql = String.format("SELECT * FROM query_async_queue_req_info WHERE queue_id = '%s' ", queue_id);
 
-        return getQueryRecords(clientConnection, ssql);
+        return getQueryRecords(queue_id);
     }
 
     @SuppressWarnings("resource")
@@ -646,15 +881,20 @@ public class SQLStatementExecutor
     }
 
     public static boolean logQueueProcessingInfo(
-            Connection clientConnection,
+            
             String queue_id,
             String statusMessage,
             String status_type)
     {
 
+    	Connection clientConnection=null;
+    	PreparedStatement pstmt=null;
         try
         {
-            final PreparedStatement pstmt = clientConnection.prepareStatement(
+        	
+        	clientConnection= DBConnectionProvider.getMasterDBConnection();
+
+        	pstmt  = clientConnection.prepareStatement(
                     "INSERT INTO `query_async_queue_exec_log`(`queue_id`,`log_ts`,`log_message`,`log_type`)"
                             + " VALUES(?, now(), ?, ?)");
 
@@ -669,21 +909,39 @@ public class SQLStatementExecutor
             // TODO Auto-generated catch block
             ex.printStackTrace();
             return false;
+        }finally {
+        	
+        	try {
+        		
+        		if(pstmt!=null) {
+        			
+        			pstmt.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
+        	
+        	try {
+        		
+        		if(clientConnection!=null) {
+        			
+        			clientConnection.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
         }
     }
 
-    public static ResultSet getPendingQueue(
-            Connection clientConnection)
+    public static String getPendingQueue()
     {
         // open queue table with lock to read and update data
-        final String ssql = "SELECT queue_id FROM query_async_queue WHERE current_status = 'QUEUED' "
-                + "ORDER BY requested_ts  LIMIT 1 OFFSET 0 FOR UPDATE ";
+        
 
-        return getQueryRecordsForUpdate(clientConnection, ssql);
+        return getQueryRecordsForUpdate( );
     }
 
     public static void updateQueueStatus(
-            Connection clientConnection,
             String queue_id,
             String status,
             int recordCount,
@@ -693,7 +951,13 @@ public class SQLStatementExecutor
         final String            updSQL = "update query_async_queue "
                 + " set record_count=?, current_status=?, completed_status=?, completed_ts=now(), modified_ts=now() "
                 + " where queue_id = ?";
-        final PreparedStatement pstmt  = clientConnection.prepareStatement(updSQL);
+        
+        Connection clientConnection=null;
+        PreparedStatement pstmt =null;
+        try {
+    	clientConnection= DBConnectionProvider.getMasterDBConnection();
+
+        pstmt  = clientConnection.prepareStatement(updSQL);
         pstmt.setInt(1, recordCount);
         pstmt.setString(2, status);
         pstmt.setString(3, completionStatus);
@@ -701,8 +965,33 @@ public class SQLStatementExecutor
         pstmt.executeUpdate();
         pstmt.close();
         clientConnection.commit();
+        
+        }catch(Exception e) {
+        	
+        }finally {
+        	
+try {
+        		
+        		if(pstmt!=null) {
+        			
+        			pstmt.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
+        	
+        	try {
+        		
+        		if(clientConnection!=null) {
+        			
+        			clientConnection.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
+        }
     }
-
+/*
     public static ResultSet getJndiInfo(
             Connection clientConnection,
             List<Long> client_ids)
@@ -714,7 +1003,7 @@ public class SQLStatementExecutor
 
         return getQueryRecords(clientConnection, ssql);
     }
-
+*/
     public String CreateQueue(
             Connection masterDBConn,
             String r_params,
@@ -759,7 +1048,7 @@ public class SQLStatementExecutor
                 req_pstmt.executeUpdate();
                 req_pstmt.close();
 
-                logQueueProcessingInfo(masterDBConn, queue_id, "Queue Created", CommonVariables.INFO);
+                logQueueProcessingInfo( queue_id, "Queue Created", CommonVariables.INFO);
             }
 
             rs.close();
@@ -775,5 +1064,54 @@ public class SQLStatementExecutor
             return null;
         }
     }
+
+	public static void update(String queueStarted, String queue_id) {
+		
+		
+		  // update the status of the picked record
+        final String            updSQL = "update query_async_queue "
+                + " set current_status=?, started_ts=?, modified_ts=? " + " where queue_id = ?";
+        Connection clientConnection=null;
+        PreparedStatement pstmt =null;
+        try {
+    	clientConnection= DBConnectionProvider.getMasterDBConnection();
+
+    	pstmt   = clientConnection.prepareStatement(updSQL);
+        pstmt.setString(1,queueStarted );
+        pstmt.setString(2, DateTimeUtility.getFormattedCurrentDateTime(DateTimeFormat.DEFAULT));
+        pstmt.setString(3, DateTimeUtility.getFormattedCurrentDateTime(DateTimeFormat.DEFAULT));
+        pstmt.setString(4, queue_id);
+        pstmt.executeUpdate();
+        pstmt.close();
+        clientConnection.commit();
+        }catch(Exception e) {
+            log.error(e.getMessage(), e);
+
+        }finally {
+        	
+        	
+        	
+	try {
+        		
+        		if(pstmt!=null) {
+        			
+        			pstmt.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
+        	
+        	try {
+        		
+        		if(clientConnection!=null) {
+        			
+        			clientConnection.close();
+        		}
+        	}catch(Exception e) {
+        		
+        	}
+        }
+		
+	}
 
 }

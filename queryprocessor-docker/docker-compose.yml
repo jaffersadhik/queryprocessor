@@ -1,5 +1,5 @@
 version: "3.1"
 services:
   beacon:
-    image: dk-reg.mas:5000/queryprocesor:28apr2025
+    image: dk-reg.mas:5000/queryprocesor:26jun2025
     build: .

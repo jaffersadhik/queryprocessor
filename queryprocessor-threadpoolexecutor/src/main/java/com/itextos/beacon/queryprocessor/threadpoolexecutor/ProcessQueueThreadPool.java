@@ -311,7 +311,20 @@ class GenerateRequestedData
                     SQLStatementExecutor.logQueueProcessingInfo( queue_id,
                             String.format("Processing Date: %s", procDateStr), CommonVariables.INFO);
 
-                    if (date.toLocalDate().isAfter(LocalDate.now().plusDays(-2)))
+                    int mysqldatadaycount=-2;
+                    
+                    try {
+                    	int temp=Integer.parseInt(System.getenv("mysqldatadaycount"));
+                    	
+                    	if(temp>2) {
+                    		
+                    		mysqldatadaycount=temp;
+                    		mysqldatadaycount*=-1;
+                    	}
+                    }catch(Exception e) {
+                    	
+                    }
+                    if (date.toLocalDate().isAfter(LocalDate.now().plusDays(mysqldatadaycount)))
                     {
                         log.info("Loading last 2 days data");
                         dbType = CommonVariables.MARIA_DB;

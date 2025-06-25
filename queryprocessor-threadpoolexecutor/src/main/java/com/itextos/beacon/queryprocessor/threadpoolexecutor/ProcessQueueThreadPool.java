@@ -326,7 +326,7 @@ class GenerateRequestedData
                     }
                     if (date.toLocalDate().isAfter(LocalDate.now().plusDays(mysqldatadaycount)))
                     {
-                        log.info("Loading last 2 days data");
+                        log.info("Loading last "+mysqldatadaycount+" days data");
                         dbType = CommonVariables.MARIA_DB;
 
                         if (clientConnection == null)
